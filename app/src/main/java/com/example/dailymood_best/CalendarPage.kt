@@ -4,11 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,7 +65,8 @@ fun CalendarPage() {
                         } else {
                             val date = currentMonth.atDay(day)
                             val isSelected = date == selectedDate
-                            val entry = diaryMap[date]
+                            val entry = diaryMap[date] // 自動讀取 DiaryData.kt
+
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
@@ -74,7 +79,9 @@ fun CalendarPage() {
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(day.toString(), fontSize = 14.sp, color = Color(0xFF6B4C3B))
-                                    Text(entry?.mood ?: "", fontSize = 16.sp)
+                                    if (entry != null) {
+                                        Text(entry.mood, fontSize = 12.sp)
+                                    }
                                 }
                             }
                             day++
@@ -88,10 +95,36 @@ fun CalendarPage() {
         Spacer(modifier = Modifier.height(24.dp))
 
         val selectedEntry = diaryMap[selectedDate]
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text("日期：$selectedDate", fontSize = 18.sp, color = Color(0xFF6B4C3B), modifier = Modifier.padding(bottom = 8.dp))
-            Text("心情：${selectedEntry?.mood ?: "無"}", fontSize = 18.sp, color = Color(0xFF6B4C3B), modifier = Modifier.padding(bottom = 4.dp))
-            Text("日記：${selectedEntry?.diary ?: "無"}", fontSize = 16.sp, color = Color(0xFF6B4C3B))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    "日期：$selectedDate",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF6B4C3B),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Divider(color = Color(0xFFFFE6D6))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    "心情：${selectedEntry?.mood ?: "尚未記錄"}",
+                    fontSize = 18.sp,
+                    color = Color(0xFF6B4C3B),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Text(
+                    "日記：${selectedEntry?.diary ?: "今天沒有寫日記喔～"}",
+                    fontSize = 16.sp,
+                    color = Color(0xFF8D6E63)
+                )
+            }
         }
     }
 }
