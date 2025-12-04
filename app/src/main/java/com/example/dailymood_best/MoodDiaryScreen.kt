@@ -1,3 +1,5 @@
+package com.example.dailymood_best
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,39 +15,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
-import androidx.compose.runtime.mutableStateMapOf
 import kotlinx.coroutines.delay
 
-// =================================================================
-// 提供的資料結構 - 假設這些定義在應用程式的頂層或 ViewModel 中
-// =================================================================
-
-data class DiaryEntry(
-    val mood: String,
-    val diary: String
-)
-
-// 全域儲存日記資料 (使用 remember/LaunchedEffect 可以更好地整合到 Composable lifecycle)
-// 為了這個範例的簡單性，我們保持原樣。
-val diaryMap = mutableStateMapOf<LocalDate, DiaryEntry>()
-
-// =================================================================
-// Composable UI 實作
-// =================================================================
-
-/**
- * 心情日記的主要畫面 Composable
- */
 @Composable
 fun MoodDiaryScreen() {
-    // 狀態管理：選定的心情和日記內容
+    // 狀態管理
     var selectedMood by remember { mutableStateOf("") }
     var diaryText by remember { mutableStateOf("") }
-
-    // 儲存狀態的回饋
     var showConfirmation by remember { mutableStateOf(false) }
 
-    // 心情選項清單
     val moods = listOf(
         Pair("開心", "😄"),
         Pair("難過", "😢"),
@@ -54,31 +32,25 @@ fun MoodDiaryScreen() {
         Pair("平靜", "😌")
     )
 
-    // 儲存日記的邏輯
     fun saveDiaryEntry() {
         if (selectedMood.isNotEmpty() && diaryText.isNotEmpty()) {
             val today = LocalDate.now()
+            // 這裡直接使用 DiaryData.kt 裡的全域變數
             diaryMap[today] = DiaryEntry(mood = selectedMood, diary = diaryText)
-
-            // 顯示確認訊息並重設輸入
             showConfirmation = true
-            // 為了真實應用，這邊通常不會清除，而是導航或在 state 中更新
-            // diaryText = ""
-            // selectedMood = ""
         }
     }
 
-    // 處理確認訊息的計時器
     LaunchedEffect(showConfirmation) {
         if (showConfirmation) {
-            delay(2000) // 顯示 2 秒
+            delay(2000)
             showConfirmation = false
         }
     }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = Color(0xFFFFF0E0) // 統一背景色
     ) {
         Column(
             modifier = Modifier
@@ -86,18 +58,16 @@ fun MoodDiaryScreen() {
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 標題
             Text(
                 text = "你今天心情如何呢~",
                 style = TextStyle(
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = Color(0xFF6B4C3B)
                 ),
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            // 心情按鈕區塊
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -114,11 +84,11 @@ fun MoodDiaryScreen() {
                 }
             }
 
-            // 顯示選定的心情
+            // 顯示選中提示
             if (selectedMood.isNotEmpty()) {
                 Text(
-                    text = "你選了：$selectedMood $",
-                    style = TextStyle(fontSize = 16.sp),
+                    text = "你選了：$selectedMood",
+                    style = TextStyle(fontSize = 16.sp, color = Color(0xFF6B4C3B)),
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             } else {
@@ -129,8 +99,6 @@ fun MoodDiaryScreen() {
                 )
             }
 
-
-            // 日記文字輸入框
             OutlinedTextField(
                 value = diaryText,
                 onValueChange = { diaryText = it },
@@ -142,26 +110,22 @@ fun MoodDiaryScreen() {
                     .padding(bottom = 16.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                 )
             )
 
-            // 儲存按鈕
             Button(
                 onClick = ::saveDiaryEntry,
                 enabled = selectedMood.isNotEmpty() && diaryText.isNotEmpty(),
-                modifier = Modifier
-                    .fillMaxWidth(0.6f)
-                    .height(50.dp),
-                shape = RoundedCornerShape(10.dp)
+                modifier = Modifier.fillMaxWidth(0.6f)
             ) {
-                Text("儲存日記", fontSize = 18.sp)
+                Text("儲存日記")
             }
         }
     }
 
-    // 儲存成功的彈出式訊息
     if (showConfirmation) {
         AlertDialog(
             onDismissRequest = { showConfirmation = false },
@@ -170,15 +134,13 @@ fun MoodDiaryScreen() {
                     Text("確定")
                 }
             },
-            title = { Text("儲存成功！") },
-            text = { Text("今天的日記已經順利儲存囉！") }
+            title = { Text("儲存成功") },
+            text = { Text("日記已儲存至日曆！") }
         )
     }
 }
 
-/**
- * 單個心情按鈕 Composable
- */
+// 這個按鈕元件原本在 MainActivity 也有，這裡保留一份即可
 @Composable
 fun MoodButton(
     emoji: String,
@@ -192,31 +154,12 @@ fun MoodButton(
             .width(60.dp)
             .clickable(onClick = onClick)
             .background(
-                color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+                color = if (isSelected) Color(0xFFFFCCBC) else Color.Transparent,
                 shape = RoundedCornerShape(12.dp)
             )
             .padding(8.dp)
     ) {
-        Text(
-            text = emoji,
-            fontSize = 32.sp, // 讓表情符號更大
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
-        Text(
-            text = moodName,
-            style = TextStyle(
-                fontSize = 12.sp,
-                color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
-            )
-        )
-    }
-}
-
-// 預覽功能
-@Preview(showBackground = true)
-@Composable
-fun PreviewMoodDiaryScreen() {
-    MaterialTheme {
-        MoodDiaryScreen()
+        Text(emoji, fontSize = 32.sp)
+        Text(moodName, fontSize = 12.sp)
     }
 }

@@ -36,7 +36,6 @@ fun CalendarPage() {
             .background(Color(0xFFFFF0E0))
             .padding(16.dp)
     ) {
-        // 月份標題
         Text(
             "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${currentMonth.year}",
             fontSize = 24.sp,
@@ -44,7 +43,6 @@ fun CalendarPage() {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // 星期標題
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
             listOf("一","二","三","四","五","六","日").forEach {
                 Text(it, fontSize = 16.sp, color = Color(0xFF6B4C3B), textAlign = TextAlign.Center)
@@ -53,7 +51,6 @@ fun CalendarPage() {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 日曆網格
         val totalCells = daysInMonth + firstDayOfMonth - 1
         val weeks = (totalCells / 7) + if (totalCells % 7 == 0) 0 else 1
         var day = 1
@@ -68,7 +65,7 @@ fun CalendarPage() {
                         } else {
                             val date = currentMonth.atDay(day)
                             val isSelected = date == selectedDate
-                            val entry = diaryMap[date] // 從 MainActivity 讀取全域資料
+                            val entry = diaryMap[date] // 自動讀取 DiaryData.kt
 
                             Box(
                                 modifier = Modifier
@@ -97,7 +94,6 @@ fun CalendarPage() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 下方顯示區
         val selectedEntry = diaryMap[selectedDate]
 
         Card(
