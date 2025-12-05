@@ -1,9 +1,19 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("kotlin-kapt")
 }
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+val myApiKey = localProperties.getProperty("apiKey") ?: ""
 
 android {
     namespace = "com.example.dailymood_best"
@@ -19,6 +29,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "API_KEY", "\"$myApiKey\"")
     }
 
     buildTypes {
@@ -39,6 +50,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true // 這行如果沒有要補上
     }
 }
 
@@ -62,4 +74,5 @@ dependencies {
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
     kapt("androidx.room:room-compiler:$room_version")
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 }
