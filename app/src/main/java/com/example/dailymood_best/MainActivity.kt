@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
@@ -21,6 +23,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+// 需要新增這幾個 import
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush // 如果你想用漸層綠色代替圖片的話可以留著，圖片版則用不到
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxWidth
 
 // 全域變數
 lateinit var moodDatabase: MoodDatabase
@@ -53,17 +61,27 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun DailyMoodApp() {
-    // 0: 首頁, 1: 心情, 2: 日曆, 3: 統計
-    var selectedTab by remember { mutableIntStateOf(0) }
+    // 【新增】PagerState 用來控制目前在第幾頁 (總共 4 頁)
+    val pagerState = rememberPagerState(pageCount = { 4 })
+
+    // 用來控制滑動動畫的協程
+    val scope = rememberCoroutineScope()
+
+    // 記錄目前要編輯的日期
     var editingDate by remember { mutableStateOf(LocalDate.now()) }
 
     Scaffold(
         bottomBar = {
             BottomNavigationBar(
-                selectedTab = selectedTab,
+                // 【連動】BottomBar 的選取狀態，直接聽 Pager 現在滑到哪一頁
+                selectedTab = pagerState.currentPage,
                 onTabSelected = { index ->
-                    selectedTab = index
-                    // 如果點擊「心情」分頁，重設為今天
+                    // 當點擊底部按鈕時，命令 Pager 滑動到那一頁
+                    scope.launch {
+                        pagerState.animateScrollToPage(index)
+                    }
+
+                    // 如果點擊的是「心情 (index 1)」，重設日期為今天
                     if (index == 1) {
                         editingDate = LocalDate.now()
                     }
@@ -72,33 +90,48 @@ fun DailyMoodApp() {
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
-            when (selectedTab) {
-                // 首頁
-                0 -> HomePage(
-                    onNavigateToMood = {
-                        editingDate = LocalDate.now() // 確保是今天
-                        selectedTab = 1
-                    },
-                    onNavigateToCalendar = { selectedTab = 2 },
-                    onNavigateToStats = { selectedTab = 3 }
-                )
+            // 【關鍵修改】使用 HorizontalPager 取代原本的 when()
+            // 這讓頁面可以左右滑動
+            HorizontalPager(
+                state = pagerState,
+                // userScrollEnabled = true // 預設就是 true，允許手指滑動
+            ) { pageIndex ->
+                // 根據頁碼顯示對應的畫面
+                when (pageIndex) {
+                    // 第 0 頁：首頁
+                    0 -> HomePage(
+                        onNavigateToMood = {
+                            editingDate = LocalDate.now()
+                            scope.launch { pagerState.animateScrollToPage(1) } // 滑到心情頁
+                        },
+                        onNavigateToCalendar = {
+                            scope.launch { pagerState.animateScrollToPage(2) } // 滑到日曆頁
+                        },
+                        onNavigateToStats = {
+                            scope.launch { pagerState.animateScrollToPage(3) } // 滑到統計頁
+                        }
+                    )
 
-                // 心情頁面 (Index 1)
-                1 -> MoodDiaryScreen(
-                    targetDate = editingDate,
-                    onGoToCalendar = { selectedTab = 2 } // 跳到日曆是 2
-                )
+                    // 第 1 頁：心情
+                    1 -> MoodDiaryScreen(
+                        targetDate = editingDate,
+                        onGoToCalendar = {
+                            scope.launch { pagerState.animateScrollToPage(2) }
+                        }
+                    )
 
-                // 日曆頁面 (Index 2)
-                2 -> CalendarPage(
-                    onEditDate = { dateToEdit ->
-                        editingDate = dateToEdit
-                        selectedTab = 1 // 跳回心情頁面是 1
-                    }
-                )
+                    // 第 2 頁：日曆
+                    2 -> CalendarPage(
+                        onEditDate = { dateToEdit ->
+                            editingDate = dateToEdit
+                            // 點擊修改後，滑動回心情頁 (Index 1)
+                            scope.launch { pagerState.animateScrollToPage(1) }
+                        }
+                    )
 
-                // 統計頁面 (Index 3)
-                3 -> StatisticsPage()
+                    // 第 3 頁：統計
+                    3 -> StatisticsPage()
+                }
             }
         }
     }
@@ -119,7 +152,7 @@ fun BottomNavigationBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
         )
         // 心情 (Index 1)
         NavigationBarItem(
-            icon = { Icon(Icons.Filled.Edit, contentDescription = "心情") }, // 換成筆的圖案比較直覺
+            icon = { Icon(Icons.Filled.Edit, contentDescription = "心情") },
             label = { Text("心情") },
             selected = selectedTab == 1,
             onClick = { onTabSelected(1) }

@@ -1,6 +1,6 @@
 package com.example.dailymood_best
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,7 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -22,9 +26,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
-// 引入 Gemini AI
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import com.google.ai.client.generativeai.GenerativeModel
-import com.example.dailymood_best.BuildConfig
+
+// 包含：無尾熊圖片、搖擺動畫、取消功能、即時金句顯示
 @Composable
 fun MoodDiaryScreen(
     targetDate: LocalDate = LocalDate.now(),
@@ -34,28 +40,25 @@ fun MoodDiaryScreen(
     var diaryText by remember { mutableStateOf("") }
     var showConfirmation by remember { mutableStateOf(false) }
     var encouragementMessage by remember { mutableStateOf("") }
-
-    // 【新增】AI 生成狀態： true = 正在思考中, false = 思考完畢
     var isGenerating by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
-    // 1. 初始化 Gemini 模型
-    // 使用 "gemini-1.5-flash" 模型，速度快且便宜(免費)
-// 測試用的寫法
+    // Gemini 2.5 模型
     val generativeModel = remember {
         GenerativeModel(
             modelName = "gemini-2.5-flash",
-            apiKey = BuildConfig.API_KEY // <--- 把你的 Key 直接貼在這裡，加上雙引號
+            apiKey = BuildConfig.API_KEY
         )
     }
 
+    // 心情對應圖片
     val moods = listOf(
-        Pair("開心", "😄"),
-        Pair("難過", "😢"),
-        Pair("生氣", "😠"),
-        Pair("興奮", "🤩"),
-        Pair("平靜", "😌")
+        Pair("開心", R.drawable.koala_happy),
+        Pair("難過", R.drawable.koala_sad),
+        Pair("生氣", R.drawable.koala_angry),
+        Pair("興奮", R.drawable.koala_excited),
+        Pair("平靜", R.drawable.koala_calm)
     )
 
     LaunchedEffect(targetDate) {
@@ -69,27 +72,25 @@ fun MoodDiaryScreen(
         }
     }
 
-    // 原本的寫死回應 (當作備案，萬一沒網路時使用)
-    fun getFallbackMessage(mood: String): String {
+    // 這裡定義金句，供下方 UI 直接呼叫顯示，也供 AI 失敗時備用
+    fun getMoodQuote(mood: String): String {
         return when (mood) {
             "開心" -> "太棒了！笑容是世界上最強大的力量。"
             "難過" -> "抱抱你，明天太陽依然會升起！"
             "生氣" -> "深呼吸，冷靜下來，你是最棒的！"
             "興奮" -> "哇！太替你開心了，繼續往前衝吧！"
-            "平靜" -> "享受這份寧靜，休息是為了走更長遠的路。"
-            else -> "日記已儲存，繼續加油！"
+            "平靜" -> "享受這份寧靜，享受周遭的人事物。"
+            else -> "請選擇一個心情來開始記錄吧！"
         }
     }
 
     fun saveDiaryEntry() {
         if (selectedMood.isNotEmpty()) {
             scope.launch {
-                // 1. 先顯示彈窗，並進入「生成中」狀態
                 showConfirmation = true
                 isGenerating = true
-                encouragementMessage = "正在為你生成專屬小語..." // 預設文字
+                encouragementMessage = "正在為你生成專屬小語..."
 
-                // 2. 儲存日記到資料庫 (IO Thread)
                 withContext(Dispatchers.IO) {
                     diaryMap[targetDate] = DiaryEntry(mood = selectedMood, diary = diaryText)
                     val newEntity = MoodEntity(
@@ -100,25 +101,19 @@ fun MoodDiaryScreen(
                     moodDatabase.moodDao().insertMood(newEntity)
                 }
 
-                // 3. 呼叫 AI 生成回應 (IO Thread)
                 try {
-                    val prompt = "你是一位溫暖、有同理心的朋友。使用者今天的心情是「$selectedMood」。" +
+                    val prompt = "你是一位溫暖、有同理心的朋友，形象是一隻可愛的無尾熊。使用者今天的心情是「$selectedMood」。" +
                             "使用者的日記內容是：「$diaryText」。" +
                             "請根據心情和日記內容，給予一段溫暖的鼓勵或回應。" +
-                            "條件：請用繁體中文，語氣溫柔，長度控制在 50 字以內，不要太長。"
+                            "條件：請用繁體中文，語氣溫柔、帶點無尾熊的慵懶可愛感，長度控制在 60 字以內。"
 
-                    // 開始生成
                     val response = withContext(Dispatchers.IO) {
                         generativeModel.generateContent(prompt)
                     }
-
-                    // 生成完成，更新文字
-                    encouragementMessage = response.text ?: getFallbackMessage(selectedMood)
+                    encouragementMessage = response.text ?: getMoodQuote(selectedMood)
 
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    // 【修改】把原本的備案文字換掉，改成顯示「真正的錯誤訊息」
-                    // 這樣我們就知道是 401 (Key錯), 404 (找不到), 還是 Host (沒網路)
                     encouragementMessage = "發生錯誤：\n${e.message}\n\n(請截圖這個畫面給我)"
                 } finally {
                     isGenerating = false
@@ -127,12 +122,22 @@ fun MoodDiaryScreen(
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFFFF0E0)
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
+        // 背景圖片
+        Image(
+            painter = painterResource(id = R.drawable.home_background),
+            contentDescription = "背景",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+            alpha = 0.3f
+        )
+
         Column(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -141,16 +146,39 @@ fun MoodDiaryScreen(
                 modifier = Modifier.padding(bottom = 24.dp, top = 16.dp)
             )
 
+            // 心情按鈕區
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp), horizontalArrangement = Arrangement.SpaceAround) {
-                moods.forEach { (moodName, emoji) ->
-                    MoodButton(emoji = emoji, moodName = moodName, isSelected = selectedMood == moodName, onClick = { selectedMood = moodName })
+                moods.forEach { (moodName, imageResId) ->
+                    MoodButton(
+                        imageResId = imageResId,
+                        moodName = moodName,
+                        isSelected = selectedMood == moodName,
+                        onClick = {
+                            selectedMood = if (selectedMood == moodName) "" else moodName
+                        }
+                    )
                 }
             }
 
+            // =========================================================
+            // 【修改重點】根據選擇的心情，直接顯示對應金句
+            // =========================================================
             if (selectedMood.isNotEmpty()) {
-                Text(text = "你選了：$selectedMood", style = TextStyle(fontSize = 20.sp, color = Color(0xFF6B4C3B)), modifier = Modifier.padding(bottom = 16.dp))
+                Text(
+                    text = getMoodQuote(selectedMood), // 直接呼叫函式顯示金句
+                    style = TextStyle(
+                        fontSize = 20.sp,
+                        color = Color(0xFF6B4C3B), // 深褐色
+                        textAlign = TextAlign.Center // 文字置中，因為金句比較長
+                    ),
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
             } else {
-                Text(text = "請選擇一個心情來開始記錄吧！", style = TextStyle(fontSize = 20.sp, color = Color.Gray), modifier = Modifier.padding(bottom = 16.dp))
+                Text(
+                    text = "請選擇一個心情來開始記錄吧！",
+                    style = TextStyle(fontSize = 20.sp, color = Color.Gray),
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
             }
 
             OutlinedTextField(
@@ -162,8 +190,8 @@ fun MoodDiaryScreen(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp, max = 300.dp).padding(bottom = 24.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White.copy(alpha = 0.8f),
+                    unfocusedContainerColor = Color.White.copy(alpha = 0.8f),
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                 )
             )
@@ -194,7 +222,7 @@ fun MoodDiaryScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = if (isGenerating) "AI 正在思考中..." else "儲存成功！很讚喔👍",
+                        text = if (isGenerating) "無尾熊正在思考中..." else "儲存成功！很讚喔👍",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF6B4C3B)
@@ -202,12 +230,8 @@ fun MoodDiaryScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 【重點】如果是生成狀態，顯示轉圈圈；否則顯示文字
                     if (isGenerating) {
-                        CircularProgressIndicator(
-                            color = Color(0xFF6B4C3B),
-                            modifier = Modifier.size(48.dp)
-                        )
+                        CircularProgressIndicator(color = Color(0xFF6B4C3B), modifier = Modifier.size(48.dp))
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("正在為你生成專屬小語...", color = Color.Gray)
                     } else {
@@ -222,7 +246,6 @@ fun MoodDiaryScreen(
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // 按鈕區塊 (生成時鎖住按鈕，避免使用者亂按)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
@@ -232,13 +255,11 @@ fun MoodDiaryScreen(
                             onClick = { showConfirmation = false },
                             border = BorderStroke(1.dp, Color(0xFF6B4C3B)),
                             modifier = Modifier.weight(1f),
-                            enabled = !isGenerating // 生成時不能按
+                            enabled = !isGenerating
                         ) {
                             Text("回到心情", fontSize = 16.sp, color = Color(0xFF6B4C3B))
                         }
-
                         Spacer(modifier = Modifier.width(16.dp))
-
                         Button(
                             onClick = {
                                 showConfirmation = false
@@ -246,7 +267,7 @@ fun MoodDiaryScreen(
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6B4C3B)),
                             modifier = Modifier.weight(1f),
-                            enabled = !isGenerating // 生成時不能按
+                            enabled = !isGenerating
                         ) {
                             Text("前往日曆", fontSize = 16.sp, color = Color.White)
                         }
@@ -257,15 +278,56 @@ fun MoodDiaryScreen(
     }
 }
 
+// MoodButton (保持慢速搖擺 + 100dp + 文字固定)
 @Composable
-fun MoodButton(emoji: String, moodName: String, isSelected: Boolean, onClick: () -> Unit) {
+fun MoodButton(
+    imageResId: Int,
+    moodName: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val animatedSize by animateDpAsState(
+        targetValue = if (isSelected) 80.dp else 60.dp,
+        label = "size"
+    )
+
+    val infiniteTransition = rememberInfiniteTransition(label = "wobble")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = -10f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "rotation"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(70.dp).clickable(onClick = onClick)
-            .background(color = if (isSelected) Color(0xFFFFCCBC) else Color.Transparent, shape = RoundedCornerShape(12.dp))
-            .padding(8.dp)
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .background(color = if (isSelected) Color(0xFFFFCCBC) else Color.Transparent)
+            .padding(4.dp)
     ) {
-        Text(emoji, fontSize = 48.sp)
-        Text(text = moodName, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 4.dp))
+        Image(
+            painter = painterResource(id = imageResId),
+            contentDescription = moodName,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(animatedSize)
+                .clip(RoundedCornerShape(12.dp))
+                .graphicsLayer {
+                    rotationZ = if (isSelected) rotation else 0f
+                }
+        )
+        Text(
+            text = moodName,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color(0xFF6B4C3B),
+            modifier = Modifier.padding(top = 4.dp)
+        )
     }
 }
