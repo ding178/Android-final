@@ -1,5 +1,10 @@
 package com.example.dailymood_best
 
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.media.MediaPlayer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,28 +22,29 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
-// 需要新增這幾個 import
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.Brush // 如果你想用漸層綠色代替圖片的話可以留著，圖片版則用不到
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.fillMaxWidth
+import java.util.Calendar
 
 // 全域變數
 lateinit var moodDatabase: MoodDatabase
 
 class MainActivity : ComponentActivity() {
+
+    // 音樂播放器
+    private var bgmPlayer: MediaPlayer? = null
+    private var bubblePlayer: MediaPlayer? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 1. 初始化資料庫
         moodDatabase = MoodDatabase.getDatabase(this)
 
+        // 2. 從資料庫讀取舊資料到記憶體 (diaryMap)
         lifecycleScope.launch(Dispatchers.IO) {
             val savedList = moodDatabase.moodDao().getAllMoods()
             withContext(Dispatchers.Main) {
@@ -53,15 +59,93 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // 3. 設定每日 21:00 提醒
+        scheduleDailyReminder()
+
+        // 4. 初始化並播放背景音樂 (BGM)
+        try {
+            // 請確認 res/raw/bgm.mp3 存在
+            bgmPlayer = MediaPlayer.create(this, R.raw.bgm)
+            bgmPlayer?.isLooping = true // 設定循環播放
+            bgmPlayer?.setVolume(0.5f, 0.5f) // 音量 50%
+            bgmPlayer?.start()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 5. 初始化按鈕音效 (Bubble)
+        try {
+            // 請確認 res/raw/bubble.mp3 存在
+            bubblePlayer = MediaPlayer.create(this, R.raw.bubble)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         setContent {
-            DailyMoodApp()
+            // 傳入播放音效的函式
+            DailyMoodApp(onPlaySound = {
+                try {
+                    if (bubblePlayer?.isPlaying == true) {
+                        bubblePlayer?.seekTo(0)
+                    }
+                    bubblePlayer?.start()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            })
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // 釋放音樂資源，避免記憶體洩漏
+        bgmPlayer?.release()
+        bubblePlayer?.release()
+    }
+
+    // 設定每日提醒排程
+    private fun scheduleDailyReminder() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(this, ReminderReceiver::class.java)
+
+        // FLAG_IMMUTABLE 是 Android 12+ (API 31+) 的強制要求
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = System.currentTimeMillis()
+            set(Calendar.HOUR_OF_DAY, 21) // 設定為晚上 9 點
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+        }
+
+        // 如果現在已經超過 21:00，就設為明天的 21:00
+        if (calendar.timeInMillis <= System.currentTimeMillis()) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+        }
+
+        try {
+            // 設定準時鬧鐘
+            alarmManager.setRepeating(
+                AlarmManager.RTC_WAKEUP,
+                calendar.timeInMillis,
+                AlarmManager.INTERVAL_DAY,
+                pendingIntent
+            )
+        } catch (e: SecurityException) {
+            // Android 12+ 預設允許精確鬧鐘，但如果被使用者關閉可能會有 Exception
+            e.printStackTrace()
         }
     }
 }
 
 @Composable
-fun DailyMoodApp() {
-    // 【新增】PagerState 用來控制目前在第幾頁 (總共 4 頁)
+fun DailyMoodApp(onPlaySound: () -> Unit) {
+    // PagerState 用來控制目前在第幾頁 (總共 4 頁)
     val pagerState = rememberPagerState(pageCount = { 4 })
 
     // 用來控制滑動動畫的協程
@@ -73,15 +157,17 @@ fun DailyMoodApp() {
     Scaffold(
         bottomBar = {
             BottomNavigationBar(
-                // 【連動】BottomBar 的選取狀態，直接聽 Pager 現在滑到哪一頁
                 selectedTab = pagerState.currentPage,
                 onTabSelected = { index ->
-                    // 當點擊底部按鈕時，命令 Pager 滑動到那一頁
+                    // 1. 播放按鈕音效
+                    onPlaySound()
+
+                    // 2. 滑動到指定頁面
                     scope.launch {
                         pagerState.animateScrollToPage(index)
                     }
 
-                    // 如果點擊的是「心情 (index 1)」，重設日期為今天
+                    // 3. 如果點擊的是「心情 (index 1)」，重設日期為今天
                     if (index == 1) {
                         editingDate = LocalDate.now()
                     }
@@ -90,25 +176,24 @@ fun DailyMoodApp() {
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
-            // 【關鍵修改】使用 HorizontalPager 取代原本的 when()
-            // 這讓頁面可以左右滑動
             HorizontalPager(
                 state = pagerState,
-                // userScrollEnabled = true // 預設就是 true，允許手指滑動
             ) { pageIndex ->
-                // 根據頁碼顯示對應的畫面
                 when (pageIndex) {
                     // 第 0 頁：首頁
                     0 -> HomePage(
                         onNavigateToMood = {
                             editingDate = LocalDate.now()
-                            scope.launch { pagerState.animateScrollToPage(1) } // 滑到心情頁
+                            onPlaySound() // 點擊首頁大按鈕也播音效
+                            scope.launch { pagerState.animateScrollToPage(1) }
                         },
                         onNavigateToCalendar = {
-                            scope.launch { pagerState.animateScrollToPage(2) } // 滑到日曆頁
+                            onPlaySound()
+                            scope.launch { pagerState.animateScrollToPage(2) }
                         },
                         onNavigateToStats = {
-                            scope.launch { pagerState.animateScrollToPage(3) } // 滑到統計頁
+                            onPlaySound()
+                            scope.launch { pagerState.animateScrollToPage(3) }
                         }
                     )
 
@@ -124,12 +209,13 @@ fun DailyMoodApp() {
                     2 -> CalendarPage(
                         onEditDate = { dateToEdit ->
                             editingDate = dateToEdit
-                            // 點擊修改後，滑動回心情頁 (Index 1)
+                            onPlaySound()
+                            // 點擊修改後，滑動回心情頁
                             scope.launch { pagerState.animateScrollToPage(1) }
                         }
                     )
 
-                    // 第 3 頁：統計
+                    // 第 3 頁：統計 (這裡會自動使用新版的圓環圖與曲線圖)
                     3 -> StatisticsPage()
                 }
             }

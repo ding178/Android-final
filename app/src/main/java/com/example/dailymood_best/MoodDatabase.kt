@@ -21,6 +21,8 @@ data class MoodEntity(
     val diary: String
 )
 
+
+
 // ==========================================
 // 2. DAO (資料操作介面)
 // ==========================================
@@ -29,14 +31,11 @@ interface MoodDao {
     // 讀取所有日記
     @Query("SELECT * FROM mood_table")
     suspend fun getAllMoods(): List<MoodEntity>
-
+    @Query("SELECT * FROM mood_table WHERE date = :date LIMIT 1")
+    suspend fun getMoodByDate(date: String): MoodEntity?
     // 新增或更新日記 (如果日期一樣，就覆蓋舊的)
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMood(moodEntity: MoodEntity)
-
-    // 刪除某一篇日記 (目前沒用到，先寫著備用)
-    @Query("DELETE FROM mood_table WHERE date = :date")
-    suspend fun deleteMood(date: String)
 }
 
 // ==========================================
