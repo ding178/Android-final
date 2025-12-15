@@ -183,14 +183,19 @@ fun StatisticsPage() {
                 color = Color(0xFFE0F7FA),
                 textColor = Color(0xFF006064)
             )
+
+            // --- 修改開始 ---
             StatCard(
                 title = "平均心情",
-                value = "$averageScore 分",
-                subText = getMoodDescription(averageScore),
+                // 原本是: value = "$averageScore 分", subText = getMoodDescription(averageScore)
+                // 修改後: 直接把評語放在 value，並移除 subText
+                value = getMoodDescription(averageScore),
+                subText = null,
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFFFF3E0),
                 textColor = Color(0xFFE65100)
             )
+            // --- 修改結束 ---
         }
     }
 }
@@ -209,17 +214,21 @@ fun getMoodDescription(score: Int): String {
 // 圖表元件區
 // ==========================================
 
+// ==========================================
+// 圖表元件區 (修改後)
+// ==========================================
+
 @Composable
 fun MoodLineChart(data: List<Pair<LocalDate, Int?>>) {
-    val gridColor = Color(0xFFF5F5F5)
+    val gridColor = Color(0xFFE0E0E0) // 網格顏色變淡
     val lineColor = Color(0xFFFF8A65)
     val dotColor = Color(0xFFD84315)
-    val zeroLineColor = Color(0xFF81D4FA)
 
+    // Y 軸文字畫筆 (改成畫文字)
     val textPaintY = remember {
         android.graphics.Paint().apply {
             color = android.graphics.Color.parseColor("#8D6E63")
-            textSize = 30f
+            textSize = 32f // 字體稍微大一點
             textAlign = android.graphics.Paint.Align.RIGHT
         }
     }
@@ -234,7 +243,7 @@ fun MoodLineChart(data: List<Pair<LocalDate, Int?>>) {
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
         val height = size.height
-        val leftPadding = 50.dp.toPx()
+        val leftPadding = 80.dp.toPx() // 左邊留寬一點給文字
         val bottomPadding = 40.dp.toPx()
 
         val chartWidth = width - leftPadding
@@ -247,30 +256,37 @@ fun MoodLineChart(data: List<Pair<LocalDate, Int?>>) {
 
         val stepX = chartWidth / (data.size - 1).coerceAtLeast(1)
 
-        // 1. 畫背景與 Y 軸
-        val levels = listOf(100, 50, 0, -50, -100)
-        levels.forEach { level ->
-            val y = getY(level)
+        // 1. 畫背景網格與 Y 軸文字 (改成心情文字，且移除 0 的特殊線)
+        // 定義要顯示的刻度與對應文字
+        val levels = listOf(
+            100 to "興奮",
+            50 to "開心",
+            0 to "平靜",
+            -50 to "難過",
+            -100 to "生氣"
+        )
+
+        levels.forEach { (score, label) ->
+            val y = getY(score)
+            // 畫文字
             drawContext.canvas.nativeCanvas.drawText(
-                level.toString(),
-                leftPadding - 15f,
+                label,
+                leftPadding - 20f,
                 y + 10f,
                 textPaintY
             )
+            // 畫網格線 (全部統一樣式，沒有特殊 0 線)
             drawLine(
-                color = if (level == 0) zeroLineColor else gridColor,
+                color = gridColor,
                 start = Offset(leftPadding, y),
                 end = Offset(width, y),
-                strokeWidth = if (level == 0) 4f else 2f,
-                pathEffect = if (level == 0) null else PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+                strokeWidth = 2f,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f)) // 虛線
             )
         }
 
-        // 2. 準備路徑
+        // 2. 準備曲線路徑 (Bézier Curve)
         val path = Path()
-        var firstPoint = true
-        var lastX = 0f
-        var lastY = 0f // 雖然沒用到，但保留結構
         val points = mutableListOf<Offset>()
 
         data.forEachIndexed { index, pair ->
@@ -279,47 +295,55 @@ fun MoodLineChart(data: List<Pair<LocalDate, Int?>>) {
             if (score != null) {
                 val y = getY(score)
                 points.add(Offset(x, y))
-
-                if (firstPoint) {
-                    path.moveTo(x, y)
-                    firstPoint = false
-                } else {
-                    // 【修改重點】這裡改成 lineTo 變成直線
-                    path.lineTo(x, y)
-                }
-                lastX = x
-                lastY = y
             }
         }
 
-        // 3. 畫線與漸層
         if (points.isNotEmpty()) {
-            drawPath(path = path, color = lineColor, style = Stroke(width = 6f))
+            path.moveTo(points.first().x, points.first().y)
 
-            // 漸層填充也要跟著改
+            // 使用 cubicTo 繪製平滑曲線
+            for (i in 0 until points.size - 1) {
+                val p1 = points[i]
+                val p2 = points[i + 1]
+
+                // 控制點邏輯：X 取兩點中間，Y 維持水平，產生 S 型曲線
+                val controlPoint1 = Offset((p1.x + p2.x) / 2, p1.y)
+                val controlPoint2 = Offset((p1.x + p2.x) / 2, p2.y)
+
+                path.cubicTo(controlPoint1.x, controlPoint1.y, controlPoint2.x, controlPoint2.y, p2.x, p2.y)
+            }
+
+            // 3. 畫線
+            drawPath(
+                path = path,
+                color = lineColor,
+                style = Stroke(width = 8f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+
+            // 4. 畫漸層填充 (選用，讓畫面豐富一點)
             val fillPath = Path()
             fillPath.addPath(path)
-            fillPath.lineTo(lastX, getY(-100))
-            fillPath.lineTo(points.first().x, getY(-100))
+            fillPath.lineTo(points.last().x, chartHeight)
+            fillPath.lineTo(points.first().x, chartHeight)
             fillPath.close()
 
             drawPath(
                 path = fillPath,
                 brush = Brush.verticalGradient(
-                    colors = listOf(lineColor.copy(alpha = 0.3f), lineColor.copy(alpha = 0.0f)),
+                    colors = listOf(lineColor.copy(alpha = 0.3f), Color.Transparent),
                     startY = 0f,
                     endY = chartHeight
                 )
             )
         }
 
-        // 4. 畫圓點
+        // 5. 畫圓點
         points.forEach { offset ->
-            drawCircle(Color.White, radius = 10f, center = offset)
-            drawCircle(dotColor, radius = 7f, center = offset)
+            drawCircle(Color.White, radius = 12f, center = offset)
+            drawCircle(dotColor, radius = 8f, center = offset)
         }
 
-        // 5. 畫 X 軸
+        // 6. 畫 X 軸日期
         val stepLabel = if (data.size <= 7) 1 else 5
         data.forEachIndexed { index, pair ->
             if (index % stepLabel == 0) {
@@ -339,63 +363,73 @@ fun MoodPieChart(data: List<Pair<LocalDate, Int?>>) {
 
     if (total == 0) return
 
-    Row(
-        modifier = Modifier.fillMaxSize(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier.weight(1.2f).fillMaxHeight(),
-            contentAlignment = Alignment.Center
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Canvas(modifier = Modifier.size(160.dp)) {
-                var startAngle = -90f
-                moodCounts.keys.sortedDescending().forEach { score ->
-                    val count = moodCounts[score] ?: 0
-                    val sweepAngle = (count.toFloat() / total) * 360f
-                    val color = moodColorMap[score] ?: Color.Gray
+            // 左側：圓環圖
+            Box(
+                modifier = Modifier
+                    .weight(1.2f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.size(200.dp)) {
+                    var startAngle = -90f
+                    val strokeWidth = 30.dp.toPx()
 
-                    drawArc(
-                        color = color,
-                        startAngle = startAngle,
-                        sweepAngle = sweepAngle,
-                        useCenter = true
-                    )
-                    drawArc(
-                        color = Color.White,
-                        startAngle = startAngle,
-                        sweepAngle = sweepAngle,
-                        useCenter = true,
-                        style = Stroke(width = 3f)
-                    )
-                    startAngle += sweepAngle
+                    moodCounts.keys.sortedDescending().forEach { score ->
+                        val count = moodCounts[score] ?: 0
+                        val sweepAngle = (count.toFloat() / total) * 360f
+                        val color = moodColorMap[score] ?: Color.Gray
+
+                        // 畫彩色圓弧
+                        drawArc(
+                            color = color,
+                            startAngle = startAngle,
+                            sweepAngle = sweepAngle,
+                            useCenter = false,
+                            style = Stroke(width = strokeWidth)
+                        )
+                        startAngle += sweepAngle
+                    }
+                }
+
+                // 中間 Total 文字
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Total", fontSize = 16.sp, color = Color.Gray)
+                    Text("$total", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
+                    Text("Days", fontSize = 12.sp, color = Color.Gray)
                 }
             }
-        }
 
-        Column(
-            modifier = Modifier
-                .weight(0.8f)
-                .padding(start = 8.dp),
-            verticalArrangement = Arrangement.Center
-        ) {
-            moodCounts.keys.sortedDescending().forEach { score ->
-                val count = moodCounts[score] ?: 0
-                val percent = ((count.toFloat() / total) * 100).toInt()
-                val color = moodColorMap[score] ?: Color.Gray
-                val label = scoreMoodMap[score] ?: "未知"
+            // 右側：圖例 (文字區)
+            Column(
+                modifier = Modifier
+                    .weight(0.8f) // 這裡控制寬度比例
+                    .padding(start = 32.dp), // ★ 改這裡：原本是 8.dp，改成 32.dp 讓它往右移
+                verticalArrangement = Arrangement.Center
+            ) {
+                moodCounts.keys.sortedDescending().forEach { score ->
+                    val count = moodCounts[score] ?: 0
+                    val percent = ((count.toFloat() / total) * 100).toInt()
+                    val color = moodColorMap[score] ?: Color.Gray
+                    val label = scoreMoodMap[score] ?: "未知"
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                ) {
-                    Box(modifier = Modifier.size(12.dp).background(color, CircleShape))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "$label $percent%",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF5D4037)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Box(modifier = Modifier.size(12.dp).background(color, CircleShape))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "$label $percent%",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF5D4037)
+                        )
+                    }
                 }
             }
         }

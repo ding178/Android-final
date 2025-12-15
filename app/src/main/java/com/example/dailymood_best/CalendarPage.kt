@@ -190,13 +190,28 @@ fun CalendarPage(onEditDate: (LocalDate) -> Unit) {
                             color = Color(0xFF5D4037)
                         )
 
+                        // --- 修改開始 ---
+                        // 判斷是否為未來日期
+                        val isFuture = selectedDate.isAfter(LocalDate.now())
+
                         Button(
                             onClick = { onEditDate(selectedDate) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFCCBC)),
+                            // 如果是未來日期，設定 enabled = false (不可按)
+                            enabled = !isFuture,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFFCCBC),
+                                // 設定不可按時的顏色 (灰色)
+                                disabledContainerColor = Color.LightGray
+                            ),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                             modifier = Modifier.height(36.dp)
                         ) {
-                            Text("修改 ✎", color = Color(0xFF5D4037), fontWeight = FontWeight.Bold)
+                            Text(
+                                "修改 ✎",
+                                // 如果不可按，文字顏色也改淡一點
+                                color = if (isFuture) Color.White else Color(0xFF5D4037),
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
 
