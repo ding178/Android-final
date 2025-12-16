@@ -3,12 +3,6 @@ package com.example.dailymood_best
 import android.speech.tts.TextToSpeech
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -56,6 +49,7 @@ fun HomePage(
 
     // 控制是否正在打招呼
     var isGreeting by remember { mutableStateOf(false) }
+    // 記錄目前要顯示哪一句問候語 (合併後只保留這一個宣告)
     var currentGreetingText by remember { mutableStateOf("") }
 
     // TTS (文字轉語音) 引擎狀態
@@ -84,9 +78,6 @@ fun HomePage(
     // 控制右上角選單是否展開
     var showMenu by remember { mutableStateOf(false) }
 
-    // 記錄目前要顯示哪一句問候語
-    var currentGreetingText by remember { mutableStateOf("") }
-
     // 5 句隨機問候語清單
     val greetings = remember {
         listOf(
@@ -100,8 +91,7 @@ fun HomePage(
 
     LaunchedEffect(isGreeting) {
         if (isGreeting) {
-            delay(2500)
-            delay(2000)
+            delay(2500) // 等待對話框顯示時間
             isGreeting = false
         }
     }
@@ -119,6 +109,7 @@ fun HomePage(
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // 背景圖
         Image(
             painter = painterResource(id = R.drawable.home_background),
             contentDescription = "主頁背景",
@@ -128,40 +119,39 @@ fun HomePage(
         )
 
         // ==========================================
-        // 【修改重點】右上角改為人像與下拉選單
+        // 1. 右上角人像與下拉選單
         // ==========================================
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 40.dp, end = 24.dp), // 調整位置
+                .padding(top = 40.dp, end = 24.dp),
             horizontalArrangement = Arrangement.End
         ) {
             Box {
-                // 1. 圓形頭像按鈕
+                // 圓形頭像按鈕
                 Surface(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .clickable { showMenu = true }, // 點擊展開選單
+                        .clickable { showMenu = true },
                     color = Color.White,
                     border = BorderStroke(2.dp, Color(0xFF6B4C3B)),
                     shadowElevation = 4.dp
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Person, // 使用內建人像圖示
+                        imageVector = Icons.Filled.Person,
                         contentDescription = "使用者選單",
                         tint = Color(0xFF6B4C3B),
                         modifier = Modifier.padding(8.dp)
                     )
                 }
 
-                // 2. 下拉選單 (DropdownMenu)
+                // 下拉選單
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
-                    modifier = Modifier.background(Color(0xFFFFF8E1)) // 暖色背景
+                    modifier = Modifier.background(Color(0xFFFFF8E1))
                 ) {
-                    // 顯示名稱 (不可點擊，僅作顯示)
                     DropdownMenuItem(
                         text = {
                             Column {
@@ -174,12 +164,11 @@ fun HomePage(
                                 )
                             }
                         },
-                        onClick = { /* 純顯示，不做動作 */ }
+                        onClick = { /* 純顯示 */ }
                     )
 
                     HorizontalDivider(color = Color(0xFFFFD180))
 
-                    // 登出按鈕
                     DropdownMenuItem(
                         text = {
                             Text("登出帳號", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
@@ -199,9 +188,10 @@ fun HomePage(
                 }
             }
         }
-        // ==========================================
 
-        // 前景內容
+        // ==========================================
+        // 2. 中央主要內容
+        // ==========================================
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -209,18 +199,27 @@ fun HomePage(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // 1. 標題
+            // (A) 標題區塊
             SmoothEntranceAnim(delay = 0) {
-                Text(
-                    text = "Daily Mood ✨",
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF6B4C3B),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Hi, ${UserManager.currentNickname ?: "朋友"}",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF8D6E63),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Text(
+                        text = "Daily Mood ✨",
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF6B4C3B),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
             }
 
-            // 2. 對話框
+// (B) 雲朵對話框 (無尾熊說話)
             SmoothEntranceAnim(delay = 50) {
                 Column(
                     modifier = Modifier.height(80.dp),
@@ -234,93 +233,39 @@ fun HomePage(
                     ) {
                         CloudBubble(text = currentGreetingText)
                     }
-            // 歡迎詞 (保留在畫面中央也很溫馨)
-            Text(
-                text = "Hi, ${UserManager.currentNickname ?: "朋友"}",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF8D6E63),
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-
-            // 頁面標題
-            Text(
-                text = "Daily Mood ✨",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF6B4C3B),
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            // 雲朵對話框顯示區
-            Box(
-                modifier = Modifier.height(80.dp),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                this@Column.AnimatedVisibility(
-                    visible = isGreeting,
-                    enter = fadeIn() + scaleIn(),
-                    exit = fadeOut() + scaleOut()
-                ) {
-                    CloudBubble(text = currentGreetingText)
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 3. 吉祥物
+            // (C) 吉祥物 (無尾熊) - 整合了點擊動畫與TTS
             SmoothEntranceAnim(delay = 150) {
                 Image(
                     painter = painterResource(id = R.drawable.koala_mascot),
                     contentDescription = "開心無尾熊吉祥物",
                     contentScale = ContentScale.Crop,
-            // 首頁吉祥物 (無尾熊)
-            Image(
-                painter = painterResource(id = R.drawable.koala_mascot),
-                contentDescription = "開心無尾熊吉祥物",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(250.dp)
-                    .padding(bottom = 24.dp)
-                    .clickable {
-                        currentGreetingText = greetings.random()
-                        isGreeting = true
-                    }
-                    .graphicsLayer {
-                        rotationZ = if (isGreeting) waveRotation else 0f
-                        transformOrigin = TransformOrigin(0.5f, 1.0f)
-                    }
-            )
-
-            // 今日心情按鈕
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .clickable { onNavigateToMood() },
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Box(
                     modifier = Modifier
                         .size(250.dp)
                         .padding(bottom = 24.dp)
                         .bouncyClick(scaleDown = 0.85f) {
+                            // 1. 設定新台詞
                             val newGreeting = greetings.random()
                             currentGreetingText = newGreeting
                             isGreeting = true
 
+                            // 2. 播放語音 (把換行符號拿掉唸起來比較順)
                             val speakText = newGreeting.replace("\n", "，")
                             tts?.speak(speakText, TextToSpeech.QUEUE_FLUSH, null, null)
                         }
                         .graphicsLayer {
+                            // 3. 設定揮手動畫
                             rotationZ = if (isGreeting) waveRotation else 0f
                             transformOrigin = TransformOrigin(0.5f, 1.0f)
                         }
                 )
             }
 
-            // 4. 今日心情按鈕
+            // (D) 今日心情按鈕
             SmoothEntranceAnim(delay = 300) {
                 Card(
                     modifier = Modifier
@@ -359,7 +304,7 @@ fun HomePage(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 5. 下方兩顆按鈕
+            // (E) 下方功能按鈕 (日曆與統計)
             SmoothEntranceAnim(delay = 450) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -396,7 +341,7 @@ fun CloudBubble(text: String) {
             color = Color.White,
             shape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 0.dp),
             shadowElevation = 4.dp,
-            border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF6B4C3B))
+            border = BorderStroke(2.dp, Color(0xFF6B4C3B))
         ) {
             Text(text = text, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), color = Color(0xFF5D4037), fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
@@ -448,15 +393,18 @@ private fun SmoothEntranceAnim(
     }
     val scale by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0.5f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow)
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow),
+        label = "scale"
     )
     val alpha by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0f,
-        animationSpec = tween(500)
+        animationSpec = tween(500),
+        label = "alpha"
     )
     val offsetY by animateFloatAsState(
         targetValue = if (isVisible) 0f else 100f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow)
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "offset"
     )
     Box(modifier = modifier.graphicsLayer {
         scaleX = scale
@@ -473,7 +421,8 @@ private fun Modifier.bouncyClick(
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (isPressed) scaleDown else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "bouncyScale"
     )
     this.graphicsLayer { scaleX = scale; scaleY = scale }
         .pointerInput(Unit) {
