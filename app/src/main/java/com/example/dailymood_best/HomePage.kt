@@ -1,45 +1,58 @@
 package com.example.dailymood_best
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.animation.core.*
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.TransformOrigin
 import kotlinx.coroutines.delay
 
 @Composable
 fun HomePage(
     onNavigateToMood: () -> Unit,
     onNavigateToCalendar: () -> Unit,
-    onNavigateToStats: () -> Unit
+    onNavigateToStats: () -> Unit,
+    onLogout: () -> Unit
 ) {
     // 控制是否正在打招呼
     var isGreeting by remember { mutableStateOf(false) }
+    // 控制右上角選單是否展開
+    var showMenu by remember { mutableStateOf(false) }
 
-    // 【新增】記錄目前要顯示哪一句問候語
+    // 記錄目前要顯示哪一句問候語
     var currentGreetingText by remember { mutableStateOf("") }
 
-    // 【新增】5 句隨機問候語清單 (暖心風格)
+    // 5 句隨機問候語清單
     val greetings = remember {
         listOf(
             "今天也要元氣滿滿喔！\n無尾熊幫你加油！",
@@ -53,13 +66,12 @@ fun HomePage(
     // 自動計時器
     LaunchedEffect(isGreeting) {
         if (isGreeting) {
-            // 【修改】時間縮短 0.5 秒 (原本 3000 -> 改成 2500)
             delay(2000)
             isGreeting = false
         }
     }
 
-    // 揮手動畫 (快速搖擺)
+    // 揮手動畫
     val infiniteTransition = rememberInfiniteTransition(label = "koalaWave")
     val waveRotation by infiniteTransition.animateFloat(
         initialValue = -10f,
@@ -83,6 +95,80 @@ fun HomePage(
             alpha = 0.3f
         )
 
+        // ==========================================
+        // 【修改重點】右上角改為人像與下拉選單
+        // ==========================================
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 40.dp, end = 24.dp), // 調整位置
+            horizontalArrangement = Arrangement.End
+        ) {
+            Box {
+                // 1. 圓形頭像按鈕
+                Surface(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .clickable { showMenu = true }, // 點擊展開選單
+                    color = Color.White,
+                    border = BorderStroke(2.dp, Color(0xFF6B4C3B)),
+                    shadowElevation = 4.dp
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Person, // 使用內建人像圖示
+                        contentDescription = "使用者選單",
+                        tint = Color(0xFF6B4C3B),
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+
+                // 2. 下拉選單 (DropdownMenu)
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    modifier = Modifier.background(Color(0xFFFFF8E1)) // 暖色背景
+                ) {
+                    // 顯示名稱 (不可點擊，僅作顯示)
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text("目前登入：", fontSize = 12.sp, color = Color.Gray)
+                                Text(
+                                    text = UserManager.currentNickname ?: "使用者",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF5D4037)
+                                )
+                            }
+                        },
+                        onClick = { /* 純顯示，不做動作 */ }
+                    )
+
+                    HorizontalDivider(color = Color(0xFFFFD180))
+
+                    // 登出按鈕
+                    DropdownMenuItem(
+                        text = {
+                            Text("登出帳號", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                        },
+                        onClick = {
+                            showMenu = false
+                            onLogout()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription = "登出",
+                                tint = Color(0xFFD32F2F)
+                            )
+                        }
+                    )
+                }
+            }
+        }
+        // ==========================================
+
         // 前景內容
         Column(
             modifier = Modifier
@@ -91,6 +177,15 @@ fun HomePage(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // 歡迎詞 (保留在畫面中央也很溫馨)
+            Text(
+                text = "Hi, ${UserManager.currentNickname ?: "朋友"}",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF8D6E63),
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+
             // 頁面標題
             Text(
                 text = "Daily Mood ✨",
@@ -105,12 +200,11 @@ fun HomePage(
                 modifier = Modifier.height(80.dp),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                androidx.compose.animation.AnimatedVisibility(
+                this@Column.AnimatedVisibility(
                     visible = isGreeting,
-                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(),
-                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut()
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
                 ) {
-                    // 【修改】這裡傳入隨機挑選出來的文字
                     CloudBubble(text = currentGreetingText)
                 }
             }
@@ -125,11 +219,8 @@ fun HomePage(
                 modifier = Modifier
                     .size(250.dp)
                     .padding(bottom = 24.dp)
-                    // 【修改】點擊邏輯
                     .clickable {
-                        // 1. 先隨機挑一句話
                         currentGreetingText = greetings.random()
-                        // 2. 再開啟顯示開關 (這會觸發動畫和計時器)
                         isGreeting = true
                     }
                     .graphicsLayer {
@@ -213,7 +304,6 @@ fun HomePage(
     }
 }
 
-// 雲朵對話框元件 (保持不變)
 @Composable
 fun CloudBubble(text: String) {
     Box(
@@ -237,7 +327,6 @@ fun CloudBubble(text: String) {
     }
 }
 
-// 共用小按鈕元件 (保持不變)
 @Composable
 fun HomeMenuButton(
     title: String,

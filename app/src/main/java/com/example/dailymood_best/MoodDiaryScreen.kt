@@ -91,15 +91,24 @@ fun MoodDiaryScreen(
                 isGenerating = true
                 encouragementMessage = "正在為你生成專屬小語..."
 
+                // 在 MoodDiaryScreen.kt 的 saveDiaryEntry 函式中
+// 找到 val newEntity = MoodEntity(...) 這一行，修改如下：
+
                 withContext(Dispatchers.IO) {
                     diaryMap[targetDate] = DiaryEntry(mood = selectedMood, diary = diaryText)
+
+                    // 這裡要取得當前登入的使用者 ID
+                    val currentUser = UserManager.currentUser ?: "guest"
+
                     val newEntity = MoodEntity(
                         date = targetDate.toString(),
+                        ownerId = currentUser, // 加入 ownerId
                         mood = selectedMood,
                         diary = diaryText
                     )
                     moodDatabase.moodDao().insertMood(newEntity)
                 }
+
 
                 try {
                     val prompt = "你是一位溫暖、有同理心的朋友，形象是一隻可愛的無尾熊。使用者今天的心情是「$selectedMood」。" +
