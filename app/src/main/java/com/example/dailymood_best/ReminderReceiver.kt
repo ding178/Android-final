@@ -19,7 +19,10 @@ class ReminderReceiver : BroadcastReceiver() {
         // 使用 Coroutine 在背景檢查資料庫
         CoroutineScope(Dispatchers.IO).launch {
             val today = LocalDate.now().toString()
-            val existingEntry = database.moodDao().getMoodByDate(today) // 需在 Dao 新增此方法
+
+            // ★★★ 修改這裡：改成呼叫 getAnyMoodByDate ★★★
+            // 只要今天資料庫裡有任何一筆資料 (不管是誰寫的)，視為已記錄
+            val existingEntry = database.moodDao().getAnyMoodByDate(today)
 
             // 如果今天沒有紀錄 (null)，發送通知
             if (existingEntry == null) {
@@ -47,7 +50,7 @@ class ReminderReceiver : BroadcastReceiver() {
         }
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_menu_edit) // 可以換成你的 icon
+            .setSmallIcon(android.R.drawable.ic_menu_edit)
             .setContentTitle("今天過得還好嗎？🐨")
             .setContentText("無尾熊在等你紀錄今天的心情喔！")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
