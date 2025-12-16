@@ -13,7 +13,7 @@ val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localProperties.load(FileInputStream(localPropertiesFile))
 }
-val myApiKey = localProperties.getProperty("apiKey") ?: ""
+val myApiKey = localProperties.getProperty("API_KEY") ?: ""
 
 android {
     namespace = "com.example.dailymood_best"

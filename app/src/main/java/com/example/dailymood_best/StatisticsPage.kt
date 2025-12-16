@@ -62,7 +62,7 @@ fun StatisticsPage() {
     val scope = rememberCoroutineScope()
 
     val generativeModel = remember {
-        GenerativeModel(modelName = "gemini-1.5-flash", apiKey = BuildConfig.API_KEY)
+        GenerativeModel(modelName = "gemini-2.5-flash", apiKey = BuildConfig.API_KEY)
     }
 
     var aiComment by remember { mutableStateOf<String?>(null) }
