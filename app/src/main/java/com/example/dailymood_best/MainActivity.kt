@@ -139,6 +139,8 @@ class MainActivity : ComponentActivity() {
         /* 正式版請改回以下程式碼：
         val calendar = Calendar.getInstance().apply {
             timeInMillis = System.currentTimeMillis()
+            set(Calendar.HOUR_OF_DAY, 17) // 設定為晚上 9 點
+            set(Calendar.MINUTE, 43)
             set(Calendar.HOUR_OF_DAY, 21) // 晚上 9 點
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
