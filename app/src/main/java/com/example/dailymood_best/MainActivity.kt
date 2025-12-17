@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
         // 1. 初始化資料庫
         moodDatabase = MoodDatabase.getDatabase(this)
 
-        // 2. 設定鬧鐘 (測試版：10秒後響鈴)
+        // 2. 設定鬧鐘
         scheduleDailyReminder()
 
         // 3. 初始化並播放背景音樂 (BGM)
@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // 設定每日提醒排程 (目前為測試模式：10秒後響鈴)
+    // 設定每日提醒排程
     private fun scheduleDailyReminder() {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(this, ReminderReceiver::class.java)
@@ -118,29 +118,9 @@ class MainActivity : ComponentActivity() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // --- 測試模式 Start: 10 秒後響鈴 ---
-        val triggerTime = System.currentTimeMillis() + 10 * 1000
 
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                if (alarmManager.canScheduleExactAlarms()) {
-                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
-                } else {
-                    alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
-                }
-            } else {
-                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
-            }
-        } catch (e: SecurityException) {
-            e.printStackTrace()
-        }
-        // --- 測試模式 End ---
-
-        /* 正式版請改回以下程式碼：
         val calendar = Calendar.getInstance().apply {
             timeInMillis = System.currentTimeMillis()
-            set(Calendar.HOUR_OF_DAY, 17) // 設定為晚上 9 點
-            set(Calendar.MINUTE, 43)
             set(Calendar.HOUR_OF_DAY, 21) // 晚上 9 點
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
@@ -154,7 +134,6 @@ class MainActivity : ComponentActivity() {
             AlarmManager.INTERVAL_DAY,
             pendingIntent
         )
-        */
     }
 }
 
