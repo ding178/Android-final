@@ -98,14 +98,47 @@
 | **徐靖祐** | 主介面開發、物件動畫、頁面配置、日曆與心情系統、雷達圖統計、無尾熊動畫、TTS語音、AI核心邏輯 | 60% |
 | **丁昱翔** | 登入系統、心情資料庫建置、週月趨勢分析、圓環圖統計、音效與BGM、定時推送通知 | 40% |
 
+## 📱 介面功能展示 (App Screenshots)
+
+為了提供最直覺、治癒的使用體驗，以下為「考拉日記」的核心介面展示：
+
+<table>
+  <tr>
+    <td align="center" width="25%">
+      <b>🔒 歡迎與登入註冊</b><br/><br/>
+      <img src="https://github.com/user-attachments/assets/9608adbb-71d8-4130-b547-d26039c475b3" width="100%"/>
+    </td>
+    <td align="center" width="25%">
+      <b>🐨 溫馨療癒主頁面</b><br/><br/>
+      <img src="https://github.com/user-attachments/assets/59bc4cb3-e98b-4385-ba3d-c0a370a3bca0" width="100%"/>
+    </td>
+    <td align="center" width="25%">
+      <b>✍️ 紀錄今日心情</b><br/><br/>
+      <img src="https://github.com/user-attachments/assets/a590d5d8-aadc-404e-b537-bb1f569482b1" width="100%"/>
+    </td>
+    <td align="center" width="25%">
+      <b>🤖 Gemini 專屬小語</b><br/><br/>
+      <img src="https://github.com/user-attachments/assets/cab40d08-ebed-4b39-8cb7-657f590bb9a3" width="100%"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%">
+      <b>📅 互動式心情日曆</b><br/><br/>
+      <img src="https://github.com/user-attachments/assets/bf3d00ad-73ce-477f-b57d-65c3ef1f8bc4" width="100%"/>
+    </td>
+    <td align="center" width="25%">
+      <b>📊 本週心情雷達圖</b><br/><br/>
+      <img src="https://github.com/user-attachments/assets/25eb87f0-8bf9-447d-8d02-11f2a212097d" width="100%"/>
+    </td>
+    <td align="center" width="25%">
+      <b>📈 本月心情圓環圖</b><br/><br/>
+      <img src="https://github.com/user-attachments/assets/b09932b1-06da-43d8-b52d-19b60352694f" width="100%"/>
+    </td>
+    <td align="center" width="25%">
+      <b>🔔 每日定時提醒通知</b><br/><br/>
+      <img src="https://github.com/user-attachments/assets/c691f3b3-2f48-4496-b46f-e2f169ffaacd" width="100%"/>
+    </td>
+  </tr>
+</table>
 ---
 *本專案為大專院校「Android 應用程式專案開發與社群媒體應用」課程之期末實作成果。*
-
-<img width="466" height="919" alt="image" src="https://github.com/user-attachments/assets/9608adbb-71d8-4130-b547-d26039c475b3" />
-<img width="346" height="680" alt="image" src="https://github.com/user-attachments/assets/59bc4cb3-e98b-4385-ba3d-c0a370a3bca0" />
-<img width="289" height="282" alt="image" src="https://github.com/user-attachments/assets/25eb87f0-8bf9-447d-8d02-11f2a212097d" />
-<img width="355" height="699" alt="image" src="https://github.com/user-attachments/assets/a590d5d8-aadc-404e-b537-bb1f569482b1" />
-<img width="506" height="717" alt="image" src="https://github.com/user-attachments/assets/cab40d08-ebed-4b39-8cb7-657f590bb9a3" />
-<img width="401" height="701" alt="image" src="https://github.com/user-attachments/assets/bf3d00ad-73ce-477f-b57d-65c3ef1f8bc4" />
-<img width="608" height="361" alt="image" src="https://github.com/user-attachments/assets/b09932b1-06da-43d8-b52d-19b60352694f" />
-<img width="305" height="386" alt="image" src="https://github.com/user-attachments/assets/c691f3b3-2f48-4496-b46f-e2f169ffaacd" />
