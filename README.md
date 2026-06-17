@@ -24,26 +24,34 @@
 * **動態無尾熊：** 點擊首頁無尾熊會觸發可愛的搖晃與揮手動畫，並伴隨打招呼的文字與語音。
 * **五感沉浸環境：** 全介面按鈕（除無尾熊外）均點擊內建特製「氣泡音」音效，並搭配舒適的背景音樂 (BGM) 與動態物理基礎果凍動畫。
 * **定時推送通知：** 每天固定時間（21:00）貼心提醒，邀請你停下腳步記錄今天的生活。
+<img width="466" height="919" alt="image" src="https://github.com/user-attachments/assets/9608adbb-71d8-4130-b547-d26039c475b3" />
 
 ### 2. ✍️ 直覺式心情日記與 Gemini AI 智慧回饋
 * **直覺心情選擇：** 提供 5 種專屬無尾熊表情按鈕（開心、難過、生氣、興奮、平靜）。
 * **Gemini 2.5-flash 情感分析：** 儲存日記時，AI 會化身為充滿同理心的無尾熊朋友，根據日記文字與心情，在 60 字內生成一段溫柔、文學感且專屬的療癒小語。
+<img width="346" height="680" alt="image" src="https://github.com/user-attachments/assets/59bc4cb3-e98b-4385-ba3d-c0a370a3bca0" />
+<img width="289" height="282" alt="image" src="https://github.com/user-attachments/assets/25eb87f0-8bf9-447d-8d02-11f2a212097d" />
 
 ### 3. 📅 互動式日曆檢視介面
 * **心情色點標記：** 日曆會自動掃描當月資料，在寫過日記的日期下方繪製對應心情顏色的圓點（如粉紅代表開心、深紅代表生氣），一目了然整月情緒。
 * **互動詳情卡片：** 點擊過去日期會透過平滑動畫 (`SmoothEntranceAnim`) 滑出當天日記詳情並支援內容修改。
 * **防呆機制：** 針對「未來」的日期會鎖定修改按鈕，防止錯誤操作。
+<img width="355" height="699" alt="image" src="https://github.com/user-attachments/assets/a590d5d8-aadc-404e-b537-bb1f569482b1" />
 
 ### 4. 📊 進階 Canvas 數據統計分析
 * **雙重維度分析：** 支援透過分段控制項 (`Segmented Control`) 切換「本週趨勢」與「本月分佈」。
 * **五維心情雷達圖 (`MoodRadarChart`)：** 捨棄傳統折線圖，利用自定義 Canvas 繪製雷達圖，將五種情緒量化，直觀反映情緒傾向。
 * **中空圓環圖 (`MoodPieChart`)：** 月分佈模式下以現代感圓環圖呈現各類心情佔比。
 * **AI 週/月總結分析：** 系統自動計算「最常出現的心情」(`Dominant Mood`)，並由 Gemini API 給予 25 字以內的週/月心理狀態溫馨總結。
+<img width="506" height="717" alt="image" src="https://github.com/user-attachments/assets/cab40d08-ebed-4b39-8cb7-657f590bb9a3" />
+<img width="401" height="701" alt="image" src="https://github.com/user-attachments/assets/bf3d00ad-73ce-477f-b57d-65c3ef1f8bc4" />
+<img width="608" height="361" alt="image" src="https://github.com/user-attachments/assets/b09932b1-06da-43d8-b52d-19b60352694f" />
 
 ### 5. 🔒 多使用者資料隔離系統
 * **單機多帳戶隱私防護：** 實作帳號註冊與登入介面，不同的帳號會連接到不同的資料庫。
 * **資料隔離技術：** 透過全域 `UserManager` 管理狀態，並於 Room Database 核心 `MoodEntity` 中加入 `ownerId` 設計成複合主鍵，確保使用者之間日記完全隔離。
 * **安全登出機制：** 登出時徹底清空記憶體暫存 (`diaryMap.clear()`)，防止資料殘留。
+<img width="305" height="386" alt="image" src="https://github.com/user-attachments/assets/c691f3b3-2f48-4496-b46f-e2f169ffaacd" />
 
 ---
 
